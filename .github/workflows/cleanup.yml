@@ -1,0 +1,35 @@
+name: Delete Old Videos (7 Days)
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 每天 UTC 0点 (北京时间 8:00) 运行
+  workflow_dispatch: # 允许在 Actions 页面手动点击运行
+
+jobs:
+  delete-old-files:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Delete MP4 files older than 7 days
+        run: |
+          # 查找 7 天前修改过的 .mp4 文件并删除
+          # -mtime +7 表示修改时间在 7x24 小时之前
+          find . -name "*.mp4" -type f -mtime +7 -print -delete
+          
+          # 配置 Git 身份
+          git config --global user.name "Auto Cleanup Bot"
+          git config --global user.email "bot@noreply.github.com"
+          
+          # 如果有文件被删除，则提交更改
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Auto delete videos older than 7 days"
+            git push
+            echo "Successfully deleted old videos."
+          else
+            echo "No videos older than 7 days found."
+          fi
